@@ -122,25 +122,25 @@ Both REST and MCP run in the Harper process, both call the same core functions w
 
 ## REST API
 
-| Endpoint                   | Method          | Auth       | Description               |
-| -------------------------- | --------------- | ---------- | ------------------------- |
-| `/KnowledgeBase/`          | GET             | Public     | List knowledge bases      |
-| `/KnowledgeBase/<id>`      | GET             | Public     | Get KB by ID              |
-| `/KnowledgeBase/`          | POST/PUT/DELETE | Team       | Manage knowledge bases    |
-| `/Knowledge/<id>`          | GET             | Public     | Get entry by ID           |
-| `/Knowledge/?query=...`    | GET             | Public     | Search entries            |
-| `/Knowledge/`              | POST            | Required   | Create entry              |
-| `/Knowledge/<id>`          | PUT             | Required   | Update entry              |
-| `/Knowledge/<id>`          | DELETE          | Team       | Deprecate entry           |
-| `/KnowledgeTag/`           | GET             | Public     | List all tags             |
-| `/Triage/`                 | GET             | Team       | List pending triage items |
-| `/Triage/`                 | POST            | Service/AI | Submit triage item        |
-| `/Triage/<id>`             | PUT             | Team       | Process triage item       |
-| `/QueryLog/`               | GET             | Team       | Search analytics          |
-| `/ServiceKey/`             | GET/POST/DELETE | Team       | API key management        |
-| `/WebhookEndpoint/`        | GET/POST/DELETE | Team       | Webhook endpoint secrets  |
-| `/History/<entryId>`       | GET             | Public     | Edit history for an entry |
-| `/Me/`                     | GET             | Public     | Current user/session info |
+| Endpoint                | Method          | Auth       | Description               |
+| ----------------------- | --------------- | ---------- | ------------------------- |
+| `/KnowledgeBase/`       | GET             | Public     | List knowledge bases      |
+| `/KnowledgeBase/<id>`   | GET             | Public     | Get KB by ID              |
+| `/KnowledgeBase/`       | POST/PUT/DELETE | Team       | Manage knowledge bases    |
+| `/Knowledge/<id>`       | GET             | Public     | Get entry by ID           |
+| `/Knowledge/?query=...` | GET             | Public     | Search entries            |
+| `/Knowledge/`           | POST            | Required   | Create entry              |
+| `/Knowledge/<id>`       | PUT             | Required   | Update entry              |
+| `/Knowledge/<id>`       | DELETE          | Team       | Deprecate entry           |
+| `/KnowledgeTag/`        | GET             | Public     | List all tags             |
+| `/Triage/`              | GET             | Team       | List pending triage items |
+| `/Triage/`              | POST            | Service/AI | Submit triage item        |
+| `/Triage/<id>`          | PUT             | Team       | Process triage item       |
+| `/QueryLog/`            | GET             | Team       | Search analytics          |
+| `/ServiceKey/`          | GET/POST/DELETE | Team       | API key management        |
+| `/WebhookEndpoint/`     | GET/POST/DELETE | Team       | Webhook endpoint secrets  |
+| `/History/<entryId>`    | GET             | Public     | Edit history for an entry |
+| `/Me/`                  | GET             | Public     | Current user/session info |
 
 ### Search Parameters
 
