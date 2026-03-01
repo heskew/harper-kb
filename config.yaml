@@ -1,0 +1,13 @@
+# Knowledge Base Plugin Configuration
+# This file defines the plugin entry point and default settings
+# All settings can be overridden in your application's config.yaml
+
+# Plugin entry point (required by Harper)
+pluginModule: 'dist/index.js'
+
+# GraphQL schema for knowledge base tables
+graphqlSchema:
+  files: 'schema/*.graphql'
+
+# Default settings (optional - these are used if not specified in app config)
+embeddingModel: 'nomic-embed-text'

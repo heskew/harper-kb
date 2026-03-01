@@ -1,0 +1,45 @@
+## OAuth 2.1 Schema
+## MCP-specific OAuth tables for JWT-based auth flow.
+## Isolated for independent publishing as a separate plugin.
+
+## OAuth 2.1 Dynamic Client Registration (RFC 7591)
+type OAuthClient @table(database: "kb") {
+	id: ID @primaryKey
+	clientSecret: String
+	clientName: String
+	redirectUris: [String]
+	grantTypes: [String]
+	responseTypes: [String]
+	scope: String
+	createdAt: Date @createdTime
+}
+
+## OAuth 2.1 Authorization Codes (5-minute TTL)
+type OAuthCode @table(database: "kb", expiration: 300) {
+	id: ID @primaryKey
+	clientId: String @indexed
+	userId: String
+	scope: String
+	codeChallenge: String
+	codeChallengeMethod: String
+	redirectUri: String
+	createdAt: Date @createdTime
+}
+
+## OAuth 2.1 Refresh Tokens (30-day TTL)
+type OAuthRefreshToken @table(database: "kb", expiration: 2592000) {
+	id: ID @primaryKey
+	clientId: String @indexed
+	userId: String
+	scope: String
+	createdAt: Date @createdTime
+}
+
+## RSA signing key pair for JWT access tokens
+type OAuthSigningKey @table(database: "kb") {
+	id: ID @primaryKey
+	publicKeyJwk: Any
+	privateKeyJwk: Any
+	algorithm: String
+	createdAt: Date @createdTime
+}

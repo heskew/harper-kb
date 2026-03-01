@@ -1,0 +1,136 @@
+## Knowledge Base Plugin Schema
+## Defines all tables for the knowledge base in the "kb" database
+
+## Knowledge base registry — one record per tenant
+type KnowledgeBase @table(database: "kb") @export {
+	id: ID @primaryKey
+	name: String
+	description: String
+	settings: Any
+	createdBy: String
+	createdAt: Date @createdTime
+	updatedAt: Date @updatedTime
+}
+
+## Core knowledge entries with vector embeddings for semantic search
+type KnowledgeEntry @table(database: "kb") @export {
+	id: ID @primaryKey
+	kbId: ID @indexed
+	kb: KnowledgeBase @relationship(from: "kbId")
+	title: String @indexed
+	content: String
+	tags: [String]
+	appliesTo: Any
+	source: String
+	sourceUrl: String
+	references: Any
+	confidence: String @indexed
+	addedBy: String
+	reviewedBy: String
+	embedding: [Float] @indexed(type: "HNSW", distance: "cosine")
+	supersedesId: ID
+	supersedes: KnowledgeEntry @relationship(from: "supersedesId")
+	supersededById: ID
+	supersededBy: KnowledgeEntry @relationship(from: "supersededById")
+	siblingIds: [ID]
+	siblings: [KnowledgeEntry] @relationship(from: "siblingIds")
+	relatedIds: [ID]
+	relatedEntries: [KnowledgeEntry] @relationship(from: "relatedIds")
+	metadata: Any
+	deprecated: Boolean @indexed
+	createdAt: Date @createdTime
+	updatedAt: Date @updatedTime
+}
+
+## Webhook intake queue for new knowledge submissions
+## 7-day TTL (604800 seconds)
+type TriageItem @table(database: "kb", expiration: 604800) {
+	id: ID @primaryKey
+	kbId: ID @indexed
+	kb: KnowledgeBase @relationship(from: "kbId")
+	source: String @indexed
+	sourceId: String @indexed
+	rawPayload: Any
+	summary: String
+	status: String @indexed
+	matchedEntryId: ID
+	matchedEntry: KnowledgeEntry @relationship(from: "matchedEntryId")
+	draftEntryId: ID
+	draftEntry: KnowledgeEntry @relationship(from: "draftEntryId")
+	action: String
+	processedBy: String
+	createdAt: Date @createdTime
+	processedAt: Date
+}
+
+## Tag registry with descriptions and usage counts
+type KnowledgeTag @table(database: "kb") {
+	id: ID @primaryKey
+	kbId: ID @indexed
+	kb: KnowledgeBase @relationship(from: "kbId")
+	description: String
+	entryCount: Int
+}
+
+## Search query analytics log
+## 30-day TTL (2592000 seconds)
+type QueryLog @table(database: "kb", expiration: 2592000) {
+	id: ID @primaryKey
+	kbId: ID @indexed
+	kb: KnowledgeBase @relationship(from: "kbId")
+	query: String
+	context: Any
+	source: String
+	resultCount: Int
+	topResultId: ID
+	topResult: KnowledgeEntry @relationship(from: "topResultId")
+	createdAt: Date @createdTime
+}
+
+## API keys for webhooks and service accounts
+type ServiceKey @table(database: "kb") {
+	id: ID @primaryKey
+	kbId: ID @indexed
+	kb: KnowledgeBase @relationship(from: "kbId")
+	name: String
+	keyHash: String
+	role: String
+	permissions: Any
+	createdBy: String
+	createdAt: Date @createdTime
+	lastUsedAt: Date
+}
+
+## Webhook delivery dedup — id is the delivery ID from the provider
+## 1-hour TTL (3600 seconds) — enough to catch replays, auto-cleans
+type WebhookDelivery @table(database: "kb", expiration: 3600) {
+	id: ID @primaryKey
+	kbId: String
+	provider: String
+	createdAt: Date @createdTime
+}
+
+## Webhook endpoint secrets — one per KB+provider, id = SHA-256(secret)
+type WebhookEndpoint @table(database: "kb") @export {
+	id: ID @primaryKey
+	kbId: ID @indexed
+	kb: KnowledgeBase @relationship(from: "kbId")
+	provider: String
+	label: String
+	createdBy: String
+	createdAt: Date @createdTime
+}
+
+## Edit history for knowledge entries — append-only audit log
+type KnowledgeEntryEdit @table(database: "kb") {
+	id: ID @primaryKey
+	kbId: ID @indexed
+	kb: KnowledgeBase @relationship(from: "kbId")
+	entryId: ID @indexed
+	entry: KnowledgeEntry @relationship(from: "entryId")
+	editedBy: String @indexed
+	editSummary: String
+	previousSnapshot: Any
+	changedFields: [String]
+	createdAt: Date @createdTime
+}

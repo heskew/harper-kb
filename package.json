@@ -1,0 +1,69 @@
+{
+	"name": "harper-kb",
+	"version": "0.2.0",
+	"description": "Knowledge base plugin for Harper with MCP server integration",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		},
+		"./config": "./config.yaml"
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch",
+		"test": "npm run build && node --test \"test/**/*.test.js\"",
+		"test:watch": "npm run build && node --test --watch \"test/**/*.test.js\"",
+		"test:coverage": "npm run build && node --enable-source-maps --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='**/harperdb/**' \"test/**/*.test.js\"",
+		"lint": "oxlint --deny-warnings .",
+		"lint:fix": "oxlint --deny-warnings --fix .",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"prepublishOnly": "npm run build"
+	},
+	"keywords": [
+		"harper",
+		"harperdb",
+		"plugin",
+		"knowledge-base",
+		"mcp",
+		"ai",
+		"embeddings",
+		"vector-search"
+	],
+	"author": "Nathan Heskew <nathan@heskew.dev> (https://heskew.dev)",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/heskew/harper-kb"
+	},
+	"dependencies": {
+		"jose": "^6.1.3"
+	},
+	"devDependencies": {
+		"@harperdb/code-guidelines": "^0.0.6",
+		"@types/node": "^22.0.0",
+		"oxlint": "^1.31.0",
+		"prettier": "^3.7.0",
+		"typescript": "^5.7.0"
+	},
+	"optionalDependencies": {
+		"harper-fabric-embeddings": "^0.1.0"
+	},
+	"peerDependencies": {
+		"harperdb": ">=4.7.0"
+	},
+	"engines": {
+		"node": ">=22"
+	},
+	"files": [
+		"dist",
+		"schema",
+		"config.yaml",
+		"README.md",
+		"LICENSE"
+	]
+}
