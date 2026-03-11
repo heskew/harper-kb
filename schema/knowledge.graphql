@@ -2,7 +2,7 @@
 ## Defines all tables for the knowledge base in the "kb" database
 
 ## Knowledge base registry — one record per tenant
-type KnowledgeBase @table(database: "kb") @export {
+type KnowledgeBase @table(database: "kb") {
 	id: ID @primaryKey
 	name: String
 	description: String
@@ -13,7 +13,7 @@ type KnowledgeBase @table(database: "kb") @export {
 }
 
 ## Core knowledge entries with vector embeddings for semantic search
-type KnowledgeEntry @table(database: "kb") @export {
+type KnowledgeEntry @table(database: "kb") {
 	id: ID @primaryKey
 	kbId: ID @indexed
 	kb: KnowledgeBase @relationship(from: "kbId")
@@ -111,7 +111,7 @@ type WebhookDelivery @table(database: "kb", expiration: 3600) {
 }
 
 ## Webhook endpoint secrets — one per KB+provider, id = SHA-256(secret)
-type WebhookEndpoint @table(database: "kb") @export {
+type WebhookEndpoint @table(database: "kb") {
 	id: ID @primaryKey
 	kbId: ID @indexed
 	kb: KnowledgeBase @relationship(from: "kbId")
