@@ -1,6 +1,6 @@
 {
 	"name": "harper-kb",
-	"version": "0.3.2",
+	"version": "0.3.3",
 	"description": "Knowledge base plugin for Harper with MCP server integration",
 	"type": "module",
 	"main": "dist/index.js",
@@ -15,9 +15,9 @@
 	"scripts": {
 		"build": "tsc",
 		"dev": "tsc --watch",
-		"test": "npm run build && node --test \"test/**/*.test.js\"",
-		"test:watch": "npm run build && node --test --watch \"test/**/*.test.js\"",
-		"test:coverage": "npm run build && node --enable-source-maps --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='**/harperdb/**' \"test/**/*.test.js\"",
+		"test": "npm run build && node --experimental-test-module-mocks --test \"test/**/*.test.js\"",
+		"test:watch": "npm run build && node --experimental-test-module-mocks --test --watch \"test/**/*.test.js\"",
+		"test:coverage": "npm run build && node --enable-source-maps --experimental-test-module-mocks --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='**/harperdb/**' \"test/**/*.test.js\"",
 		"lint": "oxlint --deny-warnings .",
 		"lint:fix": "oxlint --deny-warnings --fix .",
 		"format": "prettier --write .",
