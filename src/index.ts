@@ -71,7 +71,7 @@ export type {
 	WebhookEndpoint,
 	KnowledgePluginConfig,
 } from './types.ts';
-export type { KnowledgeHooks, AccessCheckResult } from './hooks.ts';
+export type { KnowledgeHooks, AccessCheckContext, AccessCheckResult } from './hooks.ts';
 export type { ValidatedCaller } from './oauth/validate.ts';
 
 /**

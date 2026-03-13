@@ -8,8 +8,8 @@
  *
  *   import { registerHooks } from 'harper-kb';
  *   registerHooks({
- *     onAccessCheck: async (caller, kbId) => {
- *       // custom authorization logic
+ *     onAccessCheck: async ({ user, kbId, resource, operation, channel }) => {
+ *       // custom authorization logic for REST and MCP
  *       return { allow: true };
  *     },
  *   });
@@ -21,10 +21,25 @@ import type { ValidatedCaller } from './oauth/validate.ts';
 // Hook Types
 // ============================================================================
 
+export interface AccessCheckContext {
+	/** Authenticated user (null if anonymous) */
+	user: { id?: string; username?: string; role?: string } | null;
+	/** Knowledge base ID being accessed */
+	kbId: string | null;
+	/** Resource name (e.g., 'Knowledge', 'Triage', 'KnowledgeBase') */
+	resource: string;
+	/** Read or write operation */
+	operation: 'read' | 'write';
+	/** Request channel */
+	channel: 'rest' | 'mcp';
+	/** MCP caller info (only present for channel: 'mcp') */
+	caller?: ValidatedCaller;
+}
+
 export interface AccessCheckResult {
 	/** Whether to allow access */
 	allow: boolean;
-	/** Override the caller's scopes (e.g., downgrade to read-only) */
+	/** Override the caller's scopes (e.g., downgrade to read-only). MCP only. */
 	scopes?: string[];
 	/** Reason for denial (logged, not exposed to client) */
 	reason?: string;
@@ -32,12 +47,16 @@ export interface AccessCheckResult {
 
 export interface KnowledgeHooks {
 	/**
-	 * Called after JWT validation, before the MCP request is processed.
-	 * Return { allow: false } to deny access (results in 403).
-	 * Return { allow: true, scopes: [...] } to override granted scopes.
-	 * If not registered, all authenticated users are allowed.
+	 * Universal access check for REST and MCP requests.
+	 *
+	 * Called before every resource operation (get, post, put, delete) and
+	 * before MCP request processing.
+	 *
+	 * Return { allow: false } to deny access (results in 401/403).
+	 * Return { allow: true, scopes: [...] } to override granted scopes (MCP).
+	 * If not registered, default behavior applies (public reads, role-based writes).
 	 */
-	onAccessCheck?: (caller: ValidatedCaller, kbId: string) => Promise<AccessCheckResult>;
+	onAccessCheck?: (context: AccessCheckContext) => Promise<AccessCheckResult>;
 
 	/**
 	 * URL path for login redirect.
@@ -68,14 +87,14 @@ export function registerHooks(newHooks: KnowledgeHooks): void {
 }
 
 /**
- * Run the onAccessCheck hook if registered.
+ * Run the onAccessCheck hook for a resource operation.
  *
- * Returns null if no hook is registered (caller is allowed by default).
+ * Returns null if no hook is registered (use default behavior).
  * Returns the AccessCheckResult otherwise.
  */
-export async function checkAccess(caller: ValidatedCaller, kbId: string): Promise<AccessCheckResult | null> {
+export async function checkAccess(context: AccessCheckContext): Promise<AccessCheckResult | null> {
 	if (!hooks.onAccessCheck) return null;
-	return hooks.onAccessCheck(caller, kbId);
+	return hooks.onAccessCheck(context);
 }
 
 /**

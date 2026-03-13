@@ -10,6 +10,7 @@
 
 import { getHistory } from '../core/history.ts';
 import { getEntry } from '../core/entries.ts';
+import { checkAccess } from '../hooks.ts';
 
 function getResourceClass(): any {
 	return (globalThis as any).Resource;
@@ -24,12 +25,24 @@ export class HistoryResource extends getResourceClass() {
 
 	/**
 	 * GET /History/<entryId>?kbId=.. — get edit history for a knowledge entry.
-	 * Public read access (same as KnowledgeEntry).
+	 * Default: public. Hook can restrict.
 	 */
 	async get(target?: any) {
 		const kbId = extractKbId(target);
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId query parameter is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user: this.getCurrentUser(),
+			kbId,
+			resource: 'History',
+			operation: 'read',
+			channel: 'rest',
+		});
+		if (accessResult && !accessResult.allow) {
+			const user = this.getCurrentUser();
+			return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
 		}
 
 		const entryId = this.getId();

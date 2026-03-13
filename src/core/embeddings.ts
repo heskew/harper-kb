@@ -60,10 +60,10 @@ export async function initEmbeddingModel(config: { embeddingModel: string; compo
 	// Try fabric-llama-embeddings first (lightweight, Fabric-optimized)
 	try {
 		backend = await initFabricBackend(modelName);
-		logger?.info?.(`Embedding model "${modelName}" loaded via fabric-llama-embeddings`);
+		logger?.info?.(`Embedding model "${modelName}" loaded via harper-fabric-embeddings`);
 		return;
 	} catch (err) {
-		logger?.debug?.('fabric-llama-embeddings not available, trying node-llama-cpp:', (err as Error).message);
+		logger?.debug?.('harper-fabric-embeddings not available, will try node-llama-cpp:', (err as Error).message);
 	}
 
 	// Fall back to node-llama-cpp (full-featured, handles downloads)

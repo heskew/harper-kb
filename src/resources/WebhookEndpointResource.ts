@@ -11,6 +11,7 @@
  */
 
 import { createWebhookEndpoint, listWebhookEndpoints, deleteWebhookEndpoint } from '../core/webhook-endpoints.ts';
+import { checkAccess } from '../hooks.ts';
 
 function getResourceClass(): any {
 	return (globalThis as any).Resource;
@@ -25,20 +26,33 @@ export class WebhookEndpointResource extends getResourceClass() {
 
 	/**
 	 * GET /WebhookEndpoint/?kbId=.. — list all webhook endpoints for a KB.
-	 * AUTH REQUIRED: team role only.
+	 * Default: team role required. Hook can override.
 	 */
 	async get(target?: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
-		}
-
 		const kbId = extractKbId(target);
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId query parameter is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId,
+			resource: 'WebhookEndpoint',
+			operation: 'read',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		return listWebhookEndpoints(kbId);
@@ -46,7 +60,7 @@ export class WebhookEndpointResource extends getResourceClass() {
 
 	/**
 	 * POST /WebhookEndpoint/?kbId=.. — create a new webhook endpoint.
-	 * AUTH REQUIRED: team role only.
+	 * Default: team role required. Hook can override.
 	 *
 	 * Body: { provider: "github", label?: "owner/repo" }
 	 *
@@ -55,16 +69,29 @@ export class WebhookEndpointResource extends getResourceClass() {
 	 */
 	async post(target: any, data: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
-		}
-
 		const kbId = extractKbId(target) || data?.kbId;
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId,
+			resource: 'WebhookEndpoint',
+			operation: 'write',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		if (!data?.provider) {
@@ -84,7 +111,7 @@ export class WebhookEndpointResource extends getResourceClass() {
 				kbId,
 				data.provider,
 				data.label,
-				user.username || user.id
+				user?.username || user?.id
 			);
 
 			return {
@@ -103,17 +130,10 @@ export class WebhookEndpointResource extends getResourceClass() {
 
 	/**
 	 * DELETE /WebhookEndpoint/<id>?kbId=.. — delete a webhook endpoint.
-	 * AUTH REQUIRED: team role only.
+	 * Default: team role required. Hook can override.
 	 */
 	async delete(target?: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
-		}
-
 		const id = this.getId();
 		if (!id) {
 			return { status: 400, data: { error: 'Webhook endpoint ID required' } };
@@ -122,6 +142,26 @@ export class WebhookEndpointResource extends getResourceClass() {
 		const kbId = extractKbId(target);
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId query parameter is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId,
+			resource: 'WebhookEndpoint',
+			operation: 'write',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		try {

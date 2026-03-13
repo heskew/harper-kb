@@ -9,6 +9,8 @@
  *   GET /QueryLog/<id>?kbId=..    — get a single query log entry (team role required)
  */
 
+import { checkAccess } from '../hooks.ts';
+
 function getResourceClass(): any {
 	return (globalThis as any).Resource;
 }
@@ -23,20 +25,33 @@ export class QueryLogResource extends getResourceClass() {
 	/**
 	 * GET /QueryLog/?kbId=.. — list query logs, optionally filtered.
 	 * GET /QueryLog/<id>?kbId=.. — get a single query log entry.
-	 * AUTH REQUIRED: team role only.
+	 * Default: team role required. Hook can override.
 	 */
 	async get(target?: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
-		}
-
 		const kbId = extractKbId(target);
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId query parameter is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId,
+			resource: 'QueryLog',
+			operation: 'read',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		const id = this.getId();

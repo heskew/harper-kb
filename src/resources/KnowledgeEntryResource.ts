@@ -15,6 +15,7 @@
 
 import { createEntry, getEntry, updateEntry, deprecateEntry, stripEmbedding } from '../core/entries.ts';
 import { search, listEntries } from '../core/search.ts';
+import { checkAccess } from '../hooks.ts';
 import type { SearchParams } from '../types.ts';
 
 function getResourceClass(): any {
@@ -40,6 +41,17 @@ export class KnowledgeEntryResource extends getResourceClass() {
 		const kbId = extractKbId(target);
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId query parameter is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user: this.getCurrentUser(),
+			kbId,
+			resource: 'Knowledge',
+			operation: 'read',
+			channel: 'rest',
+		});
+		if (accessResult && !accessResult.allow) {
+			return { status: 403, data: { error: accessResult.reason || 'Access denied' } };
 		}
 
 		const id = this.getId();
@@ -97,13 +109,24 @@ export class KnowledgeEntryResource extends getResourceClass() {
 	 */
 	async post(target: any, data: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-
 		const kbId = extractKbId(target) || data?.kbId;
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId,
+			resource: 'Knowledge',
+			operation: 'write',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else if (!user) {
+			return { status: 401, data: { error: 'Authentication required' } };
 		}
 
 		if (!data?.title || !data?.content) {
@@ -133,10 +156,6 @@ export class KnowledgeEntryResource extends getResourceClass() {
 	 */
 	async put(target: any, data: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-
 		const id = this.getId();
 		if (!id) {
 			return { status: 400, data: { error: 'Entry ID required' } };
@@ -145,6 +164,21 @@ export class KnowledgeEntryResource extends getResourceClass() {
 		const kbId = extractKbId(target) || data?.kbId;
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId,
+			resource: 'Knowledge',
+			operation: 'write',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else if (!user) {
+			return { status: 401, data: { error: 'Authentication required' } };
 		}
 
 		if (user.role === 'ai-agent') {
@@ -179,13 +213,6 @@ export class KnowledgeEntryResource extends getResourceClass() {
 	 */
 	async delete(target?: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
-		}
-
 		const id = this.getId();
 		if (!id) {
 			return { status: 400, data: { error: 'Entry ID required' } };
@@ -194,6 +221,27 @@ export class KnowledgeEntryResource extends getResourceClass() {
 		const kbId = extractKbId(target);
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId query parameter is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId,
+			resource: 'Knowledge',
+			operation: 'write',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			// Default behavior: auth + team role
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		// Verify entry belongs to this KB

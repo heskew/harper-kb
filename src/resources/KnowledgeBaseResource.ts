@@ -19,6 +19,7 @@ import {
 	deleteKnowledgeBase,
 	listKnowledgeBases,
 } from '../core/knowledge-base.ts';
+import { checkAccess } from '../hooks.ts';
 
 function getResourceClass(): any {
 	return (globalThis as any).Resource;
@@ -30,10 +31,23 @@ export class KnowledgeBaseResource extends getResourceClass() {
 	/**
 	 * GET /KnowledgeBase/<id> — return a single KB.
 	 * GET /KnowledgeBase/ — list all KBs.
-	 * PUBLIC — no auth required.
+	 * Default: public. Hook can restrict.
 	 */
 	async get() {
 		const id = this.getId();
+
+		const accessResult = await checkAccess({
+			user: this.getCurrentUser(),
+			kbId: id ? String(id) : null,
+			resource: 'KnowledgeBase',
+			operation: 'read',
+			channel: 'rest',
+		});
+		if (accessResult && !accessResult.allow) {
+			const user = this.getCurrentUser();
+			return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+		}
+
 		if (id) {
 			const kb = await getKnowledgeBase(String(id));
 			if (!kb) {
@@ -47,15 +61,29 @@ export class KnowledgeBaseResource extends getResourceClass() {
 
 	/**
 	 * POST /KnowledgeBase/ — create a new knowledge base.
-	 * AUTH REQUIRED: team role only.
+	 * Default: team role required. Hook can override.
 	 */
 	async post(_target: any, data: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
+
+		const accessResult = await checkAccess({
+			user,
+			kbId: data?.id || null,
+			resource: 'KnowledgeBase',
+			operation: 'write',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		if (!data?.id || !data?.name) {
@@ -65,7 +93,7 @@ export class KnowledgeBaseResource extends getResourceClass() {
 		try {
 			return await createKnowledgeBase({
 				...data,
-				createdBy: user.username || user.id || 'unknown',
+				createdBy: user?.username || user?.id || 'unknown',
 			});
 		} catch (error) {
 			if ((error as Error).message.includes('already exists')) {
@@ -77,20 +105,33 @@ export class KnowledgeBaseResource extends getResourceClass() {
 
 	/**
 	 * PUT /KnowledgeBase/<id> — update a knowledge base.
-	 * AUTH REQUIRED: team role only.
+	 * Default: team role required. Hook can override.
 	 */
 	async put(_target: any, data: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
-		}
-
 		const id = this.getId();
 		if (!id) {
 			return { status: 400, data: { error: 'Knowledge base ID required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId: String(id),
+			resource: 'KnowledgeBase',
+			operation: 'write',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		try {
@@ -105,20 +146,33 @@ export class KnowledgeBaseResource extends getResourceClass() {
 
 	/**
 	 * DELETE /KnowledgeBase/<id> — delete a knowledge base.
-	 * AUTH REQUIRED: team role only.
+	 * Default: team role required. Hook can override.
 	 */
 	async delete() {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
-		}
-
 		const id = this.getId();
 		if (!id) {
 			return { status: 400, data: { error: 'Knowledge base ID required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId: String(id),
+			resource: 'KnowledgeBase',
+			operation: 'write',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		try {

@@ -51,7 +51,7 @@
 		"typescript": "^5.7.0"
 	},
 	"optionalDependencies": {
-		"harper-fabric-embeddings": "^0.1.1"
+		"harper-fabric-embeddings": "^0.1.4"
 	},
 	"peerDependencies": {
 		"harperdb": ">=4.7.0"

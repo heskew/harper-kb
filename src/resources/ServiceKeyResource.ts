@@ -12,6 +12,7 @@
  */
 
 import crypto from 'node:crypto';
+import { checkAccess } from '../hooks.ts';
 
 function getResourceClass(): any {
 	return (globalThis as any).Resource;
@@ -43,20 +44,33 @@ export class ServiceKeyResource extends getResourceClass() {
 	/**
 	 * GET /ServiceKey/?kbId=.. — list all service keys (keyHash excluded).
 	 * GET /ServiceKey/<id>?kbId=.. — get a single key (keyHash excluded).
-	 * AUTH REQUIRED: team role only.
+	 * Default: team role required. Hook can override.
 	 */
 	async get(target?: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
-		}
-
 		const kbId = extractKbId(target);
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId query parameter is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId,
+			resource: 'ServiceKey',
+			operation: 'read',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		const id = this.getId();
@@ -85,7 +99,7 @@ export class ServiceKeyResource extends getResourceClass() {
 
 	/**
 	 * POST /ServiceKey/?kbId=.. — create a new API key.
-	 * AUTH REQUIRED: team role only.
+	 * Default: team role required. Hook can override.
 	 *
 	 * Body: { name: string, role: "service_account" | "ai_agent", permissions?: object }
 	 *
@@ -93,16 +107,29 @@ export class ServiceKeyResource extends getResourceClass() {
 	 */
 	async post(target: any, data: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
-		}
-
 		const kbId = extractKbId(target) || data?.kbId;
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId,
+			resource: 'ServiceKey',
+			operation: 'write',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		if (!data?.name) {
@@ -128,7 +155,7 @@ export class ServiceKeyResource extends getResourceClass() {
 			keyHash: `${salt}:${hash}`,
 			role: data.role,
 			permissions: data.permissions || null,
-			createdBy: user.username || user.id || 'unknown',
+			createdBy: user?.username || user?.id || 'unknown',
 		};
 
 		await databases.kb.ServiceKey.put(record);
@@ -142,17 +169,10 @@ export class ServiceKeyResource extends getResourceClass() {
 
 	/**
 	 * DELETE /ServiceKey/<id>?kbId=.. — delete a service key.
-	 * AUTH REQUIRED: team role only.
+	 * Default: team role required. Hook can override.
 	 */
 	async delete(target?: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
-		}
-
 		const id = this.getId();
 		if (!id) {
 			return { status: 400, data: { error: 'Service key ID required' } };
@@ -161,6 +181,26 @@ export class ServiceKeyResource extends getResourceClass() {
 		const kbId = extractKbId(target);
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId query parameter is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId,
+			resource: 'ServiceKey',
+			operation: 'write',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		const existing = await databases.kb.ServiceKey.get(String(id));

@@ -11,6 +11,7 @@
  */
 
 import { submitTriage, processTriage, listPending } from '../core/triage.ts';
+import { checkAccess } from '../hooks.ts';
 import type { TriageAction, TriageProcessOptions } from '../types.ts';
 
 function getResourceClass(): any {
@@ -26,20 +27,33 @@ export class TriageResource extends getResourceClass() {
 
 	/**
 	 * GET /Triage/?kbId=.. — list pending triage items.
-	 * AUTH REQUIRED: team role only.
+	 * Default: team role required. Hook can override.
 	 */
 	async get(target?: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
-		}
-
 		const kbId = extractKbId(target);
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId query parameter is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId,
+			resource: 'Triage',
+			operation: 'read',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		return listPending(kbId);
@@ -47,23 +61,36 @@ export class TriageResource extends getResourceClass() {
 
 	/**
 	 * POST /Triage/?kbId=.. — submit a new triage item.
-	 * AUTH REQUIRED: service_account or ai_agent role.
+	 * Default: service_account or ai_agent role. Hook can override.
 	 */
 	async post(target: any, data: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'service_account' && user.role !== 'ai_agent') {
-			return {
-				status: 403,
-				data: { error: 'service_account or ai_agent role required' },
-			};
-		}
-
 		const kbId = extractKbId(target) || data?.kbId;
 		if (!kbId) {
 			return { status: 400, data: { error: 'kbId is required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId,
+			resource: 'Triage',
+			operation: 'write',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'service_account' && user.role !== 'ai_agent') {
+				return {
+					status: 403,
+					data: { error: 'service_account or ai_agent role required' },
+				};
+			}
 		}
 
 		if (!data?.source || !data?.summary) {
@@ -78,7 +105,7 @@ export class TriageResource extends getResourceClass() {
 
 	/**
 	 * PUT /Triage/<id> — process a triage item.
-	 * AUTH REQUIRED: team role only.
+	 * Default: team role required. Hook can override.
 	 *
 	 * Body should include:
 	 *   { action: "accepted" | "dismissed" | "linked",
@@ -88,16 +115,29 @@ export class TriageResource extends getResourceClass() {
 	 */
 	async put(_target: any, data: any) {
 		const user = this.getCurrentUser();
-		if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
-		}
-		if (user.role !== 'team') {
-			return { status: 403, data: { error: 'Team role required' } };
-		}
-
 		const id = this.getId();
 		if (!id) {
 			return { status: 400, data: { error: 'Triage item ID required' } };
+		}
+
+		const accessResult = await checkAccess({
+			user,
+			kbId: null,
+			resource: 'Triage',
+			operation: 'write',
+			channel: 'rest',
+		});
+		if (accessResult) {
+			if (!accessResult.allow) {
+				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+			}
+		} else {
+			if (!user) {
+				return { status: 401, data: { error: 'Authentication required' } };
+			}
+			if (user.role !== 'team') {
+				return { status: 403, data: { error: 'Team role required' } };
+			}
 		}
 
 		if (!data?.action) {
@@ -114,7 +154,7 @@ export class TriageResource extends getResourceClass() {
 			};
 		}
 		const action = data.action as TriageAction;
-		const processedBy = data.processedBy || user.username || user.id || 'unknown';
+		const processedBy = data.processedBy || user?.username || user?.id || 'unknown';
 		const options: TriageProcessOptions = {};
 
 		if (data.entryData) {
