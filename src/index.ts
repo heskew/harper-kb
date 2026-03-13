@@ -85,12 +85,13 @@ export async function handleApplication(scope: Scope): Promise<void> {
 	// Read plugin configuration
 	const rawOptions = (scope.options.getAll() || {}) as KnowledgePluginConfig;
 	const embeddingModel = rawOptions.embeddingModel || 'nomic-embed-text';
+	const embeddingBackend = rawOptions.embeddingBackend;
 
 	// Initialize the embedding model in the background (downloads on first run).
 	// Don't await — the download can take minutes and would exceed Harper's
 	// 30-second handleApplication timeout. Semantic search degrades gracefully
 	// to keyword-only mode until the model is ready.
-	initEmbeddingModel({ embeddingModel, componentDir: scope.directory }).then(
+	initEmbeddingModel({ embeddingModel, embeddingBackend, componentDir: scope.directory }).then(
 		() => scopeLogger?.info?.(`Embedding model "${embeddingModel}" loaded`),
 		(error) =>
 			scopeLogger?.error?.(

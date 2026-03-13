@@ -31,7 +31,8 @@ Add to your application's `config.yaml`:
 ```yaml
 'harper-kb':
   package: 'harper-kb'
-  embeddingModel: nomic-embed-text # default
+  embeddingModel: nomic-embed-text  # default
+  # embeddingBackend: onnx          # force a specific backend (gguf, onnx, llama-cpp)
 ```
 
 ### Run
@@ -42,14 +43,23 @@ harperdb dev .
 
 ## Embeddings
 
-Vector embeddings for semantic search run locally on CPU using [Nomic](https://huggingface.co/nomic-ai) embedding models via llama.cpp. Two backends are supported:
+Vector embeddings for semantic search run locally on CPU using [Nomic](https://huggingface.co/nomic-ai) embedding models. Three backends are supported:
 
-| Backend                                                                        | Install                              | Use case                                 |
-| ------------------------------------------------------------------------------ | ------------------------------------ | ---------------------------------------- |
-| [harper-fabric-embeddings](https://github.com/heskew/harper-fabric-embeddings) | Optional dependency (auto-installed) | Production on Fabric (linux-x64, ~19 MB) |
-| [node-llama-cpp](https://github.com/withcatai/node-llama-cpp)                  | `npm install node-llama-cpp`         | Local development on any platform        |
+| Backend                                                                        | Config key  | Install                              | Use case                                 |
+| ------------------------------------------------------------------------------ | ----------- | ------------------------------------ | ---------------------------------------- |
+| [harper-fabric-embeddings](https://github.com/heskew/harper-fabric-embeddings) | `gguf`      | Optional dependency (auto-installed) | Production on Fabric (linux-x64, ~19 MB) |
+| [harper-fabric-onnx](https://github.com/heskew/harper-fabric-onnx)             | `onnx`      | Optional dependency (auto-installed) | ONNX Runtime on Fabric                   |
+| [node-llama-cpp](https://github.com/withcatai/node-llama-cpp)                  | `llama-cpp` | `npm install node-llama-cpp`         | Local development on any platform        |
 
-The plugin tries `harper-fabric-embeddings` first and falls back to `node-llama-cpp`. If neither is available, semantic search is skipped and keyword search still works.
+By default the plugin tries each backend in order (`gguf` → `onnx` → `llama-cpp`). To force a specific backend, set `embeddingBackend` in config:
+
+```yaml
+'harper-kb':
+  package: 'harper-kb'
+  embeddingBackend: onnx
+```
+
+If no backend is available, semantic search is skipped and keyword search still works.
 
 ### Models
 
@@ -61,8 +71,9 @@ The plugin tries `harper-fabric-embeddings` first and falls back to `node-llama-
 ```yaml
 'harper-kb':
   package: 'harper-kb'
-  embeddingModel: nomic-embed-text # v1.5 (default)
+  embeddingModel: nomic-embed-text      # v1.5 (default)
   # embeddingModel: nomic-embed-text-v2-moe  # v2 MoE — better quality, larger
+  # embeddingBackend: onnx              # force a specific backend
 ```
 
 ## Architecture
@@ -238,7 +249,7 @@ MCP uses OAuth 2.1 with PKCE for authentication. MCP clients discover auth requi
 # Build
 npm run build
 
-# Run tests (414 tests)
+# Run tests (421 tests)
 npm test
 
 # Test with coverage
@@ -261,7 +272,7 @@ npm test
 
 ## Fabric Deployment
 
-For deploying to Harper Fabric, `harper-fabric-embeddings` is installed automatically as an optional dependency — no node-llama-cpp trimming or special build steps needed.
+For deploying to Harper Fabric, `harper-fabric-embeddings` and `harper-fabric-onnx` are installed automatically as optional dependencies — no node-llama-cpp trimming or special build steps needed.
 
 ```dockerfile
 # Dockerfile.build

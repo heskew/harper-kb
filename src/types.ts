@@ -319,6 +319,8 @@ export interface WebhookEndpoint {
 export interface KnowledgePluginConfig {
 	/** Embedding model name (default: "nomic-embed-text") */
 	embeddingModel?: string;
+	/** Preferred embedding backend: "gguf", "onnx", or "llama-cpp" (default: tries each in order) */
+	embeddingBackend?: 'gguf' | 'onnx' | 'llama-cpp';
 }
 
 // ============================================================================

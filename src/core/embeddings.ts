@@ -1,16 +1,19 @@
 /**
  * Embedding Model Management
  *
- * Generates vector embeddings for semantic search. Supports two backends:
+ * Generates vector embeddings for semantic search. Supports three backends:
  *
- *   1. harper-fabric-embeddings — Minimal native wrapper (~19 MB).
+ *   1. harper-fabric-embeddings — Minimal native GGUF wrapper (~19 MB).
  *      Preferred on Fabric. Requires a pre-staged model file.
  *
- *   2. node-llama-cpp — Full-featured wrapper (~250 MB+).
+ *   2. harper-fabric-onnx — ONNX Runtime backend.
+ *      Alternative on Fabric; may be preferred depending on deployment.
+ *
+ *   3. node-llama-cpp — Full-featured wrapper (~250 MB+).
  *      Fallback for local dev. Downloads the model on first run.
  *
- * The backend is selected automatically: fabric-llama-embeddings is tried
- * first, and node-llama-cpp is used if it's not available.
+ * The backend is selected automatically by trying each in order,
+ * or a specific backend can be requested via the `embeddingBackend` config option.
  */
 
 import { writeFile, readFile, unlink, mkdir } from 'node:fs/promises';
@@ -44,11 +47,31 @@ let modelsDir: string | null = null;
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
+type BackendId = 'gguf' | 'onnx' | 'llama-cpp';
+
+interface BackendEntry {
+	id: BackendId;
+	label: string;
+	init: (modelName: string) => Promise<EmbeddingBackend>;
+}
+
+const BACKENDS: BackendEntry[] = [
+	{ id: 'gguf', label: 'harper-fabric-embeddings', init: initFabricBackend },
+	{ id: 'onnx', label: 'harper-fabric-onnx', init: initFabricOnnxBackend },
+	{ id: 'llama-cpp', label: 'node-llama-cpp', init: initNodeLlamaCppBackend },
+];
+
 /**
  * Initialize the embedding model.
- * Tries fabric-llama-embeddings first, then falls back to node-llama-cpp.
+ *
+ * When `embeddingBackend` is set, that backend is used directly (no fallback).
+ * Otherwise backends are tried in order: gguf → onnx → llama-cpp.
  */
-export async function initEmbeddingModel(config: { embeddingModel: string; componentDir: string }): Promise<void> {
+export async function initEmbeddingModel(config: {
+	embeddingModel: string;
+	componentDir: string;
+	embeddingBackend?: BackendId;
+}): Promise<void> {
 	if (backend) {
 		logger?.debug?.('Embedding model already initialized');
 		return;
@@ -57,18 +80,31 @@ export async function initEmbeddingModel(config: { embeddingModel: string; compo
 	const modelName = config.embeddingModel || 'nomic-embed-text';
 	modelsDir = path.join(config.componentDir, 'models');
 
-	// Try fabric-llama-embeddings first (lightweight, Fabric-optimized)
-	try {
-		backend = await initFabricBackend(modelName);
-		logger?.info?.(`Embedding model "${modelName}" loaded via harper-fabric-embeddings`);
+	// If a specific backend is requested, use it directly
+	if (config.embeddingBackend) {
+		const entry = BACKENDS.find((b) => b.id === config.embeddingBackend);
+		if (!entry) {
+			throw new Error(
+				`Unknown embedding backend: "${config.embeddingBackend}". Supported: ${BACKENDS.map((b) => b.id).join(', ')}`
+			);
+		}
+		backend = await entry.init(modelName);
+		logger?.info?.(`Embedding model "${modelName}" loaded via ${entry.label}`);
 		return;
-	} catch (err) {
-		logger?.debug?.('harper-fabric-embeddings not available, will try node-llama-cpp:', (err as Error).message);
 	}
 
-	// Fall back to node-llama-cpp (full-featured, handles downloads)
-	backend = await initNodeLlamaCppBackend(modelName);
-	logger?.info?.(`Embedding model "${modelName}" loaded via node-llama-cpp`);
+	// Auto-detect: try each backend in order
+	for (const entry of BACKENDS) {
+		try {
+			backend = await entry.init(modelName);
+			logger?.info?.(`Embedding model "${modelName}" loaded via ${entry.label}`);
+			return;
+		} catch (err) {
+			logger?.debug?.(`${entry.label} not available:`, (err as Error).message);
+		}
+	}
+
+	throw new Error('No embedding backend available. Install harper-fabric-embeddings, harper-fabric-onnx, or node-llama-cpp.');
 }
 
 /**
@@ -92,7 +128,7 @@ export async function dispose(): Promise<void> {
 	logger?.info?.('Embedding model disposed');
 }
 
-// ─── fabric-llama-embeddings backend ────────────────────────────────────────
+// ─── harper-fabric-embeddings backend ────────────────────────────────────────
 
 async function initFabricBackend(modelName: string): Promise<EmbeddingBackend> {
 	const fabricPkg = 'harper-fabric-embeddings';
@@ -116,6 +152,24 @@ async function initFabricBackend(modelName: string): Promise<EmbeddingBackend> {
 	return {
 		generateEmbedding: (text) => fabricModule.embed(text),
 		dispose: () => fabricModule.dispose(),
+	};
+}
+
+// ─── harper-fabric-onnx backend ──────────────────────────────────────────────
+
+async function initFabricOnnxBackend(modelName: string): Promise<EmbeddingBackend> {
+	const onnxPkg = 'harper-fabric-onnx';
+	const onnxModule = (await import(onnxPkg)) as unknown as {
+		init(options: { modelPath?: string; modelsDir?: string; modelName?: string }): Promise<void>;
+		embed(text: string): Promise<number[]>;
+		dispose(): Promise<void>;
+	};
+
+	await onnxModule.init({ modelsDir: modelsDir!, modelName });
+
+	return {
+		generateEmbedding: (text) => onnxModule.embed(text),
+		dispose: () => onnxModule.dispose(),
 	};
 }
 
