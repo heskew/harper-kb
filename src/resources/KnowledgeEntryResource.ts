@@ -123,10 +123,14 @@ export class KnowledgeEntryResource extends getResourceClass() {
 		});
 		if (accessResult) {
 			if (!accessResult.allow) {
-				return { status: user ? 403 : 401, data: { error: accessResult.reason || 'Access denied' } };
+				const err = new Error(accessResult.reason || 'Access denied');
+				(err as any).statusCode = user ? 403 : 401;
+				throw err;
 			}
 		} else if (!user) {
-			return { status: 401, data: { error: 'Authentication required' } };
+			const err = new Error('Authentication required');
+			(err as any).statusCode = 401;
+			throw err;
 		}
 
 		if (!data?.title || !data?.content) {
