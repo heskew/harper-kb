@@ -114,9 +114,10 @@ export function createMcpMiddleware(): (
 
 		// Run the onAccessCheck hook (if registered by the parent app)
 		const accessResult = await checkAccess({
-			user: effectiveCaller.userId !== 'anonymous'
-				? { id: effectiveCaller.userId, username: effectiveCaller.userId }
-				: null,
+			user:
+				effectiveCaller.userId !== 'anonymous'
+					? { id: effectiveCaller.userId, username: effectiveCaller.userId }
+					: null,
 			kbId,
 			resource: 'mcp',
 			operation: 'read',
