@@ -13,11 +13,12 @@ import { registerHooks, checkAccess, getLoginPath, _resetHooks } from '../../dis
 
 const TEST_KB = 'test-kb';
 
-const mockCaller = {
-	userId: 'test:octocat',
-	clientId: 'test-client',
-	scopes: ['mcp:read', 'mcp:write'],
+const mockContext = {
+	user: { id: 'test:octocat', username: 'test:octocat' },
 	kbId: TEST_KB,
+	resource: 'mcp',
+	operation: 'read',
+	channel: 'mcp',
 };
 
 describe('onAccessCheck hook', () => {
@@ -31,27 +32,25 @@ describe('onAccessCheck hook', () => {
 	});
 
 	it('returns null when no hook is registered (default allow)', async () => {
-		const result = await checkAccess(mockCaller, TEST_KB);
+		const result = await checkAccess(mockContext);
 
 		assert.strictEqual(result, null);
 	});
 
-	it('calls the registered hook with caller and kbId', async () => {
-		let receivedCaller = null;
-		let receivedKbId = null;
+	it('calls the registered hook with the context object', async () => {
+		let receivedContext = null;
 
 		registerHooks({
-			onAccessCheck: async (caller, kbId) => {
-				receivedCaller = caller;
-				receivedKbId = kbId;
+			onAccessCheck: async (context) => {
+				receivedContext = context;
 				return { allow: true };
 			},
 		});
 
-		await checkAccess(mockCaller, TEST_KB);
+		await checkAccess(mockContext);
 
-		assert.deepStrictEqual(receivedCaller, mockCaller);
-		assert.strictEqual(receivedKbId, TEST_KB);
+		assert.deepStrictEqual(receivedContext, mockContext);
+		assert.strictEqual(receivedContext.kbId, TEST_KB);
 	});
 
 	it('returns allow: true from the hook', async () => {
@@ -59,7 +58,7 @@ describe('onAccessCheck hook', () => {
 			onAccessCheck: async () => ({ allow: true }),
 		});
 
-		const result = await checkAccess(mockCaller, TEST_KB);
+		const result = await checkAccess(mockContext);
 
 		assert.ok(result);
 		assert.strictEqual(result.allow, true);
@@ -73,7 +72,7 @@ describe('onAccessCheck hook', () => {
 			}),
 		});
 
-		const result = await checkAccess(mockCaller, TEST_KB);
+		const result = await checkAccess(mockContext);
 
 		assert.ok(result);
 		assert.strictEqual(result.allow, false);
@@ -88,7 +87,7 @@ describe('onAccessCheck hook', () => {
 			}),
 		});
 
-		const result = await checkAccess(mockCaller, TEST_KB);
+		const result = await checkAccess(mockContext);
 
 		assert.ok(result);
 		assert.strictEqual(result.allow, true);
@@ -104,7 +103,7 @@ describe('onAccessCheck hook', () => {
 			onAccessCheck: async () => ({ allow: true }),
 		});
 
-		const result = await checkAccess(mockCaller, TEST_KB);
+		const result = await checkAccess(mockContext);
 
 		assert.ok(result);
 		assert.strictEqual(result.allow, true);
@@ -112,37 +111,40 @@ describe('onAccessCheck hook', () => {
 
 	it('can make per-KB decisions', async () => {
 		registerHooks({
-			onAccessCheck: async (_caller, kbId) => {
-				if (kbId === 'private-kb') {
+			onAccessCheck: async (context) => {
+				if (context.kbId === 'private-kb') {
 					return { allow: false, reason: 'KB is private' };
 				}
 				return { allow: true };
 			},
 		});
 
-		const publicResult = await checkAccess(mockCaller, 'public-kb');
+		const publicResult = await checkAccess({ ...mockContext, kbId: 'public-kb' });
 		assert.ok(publicResult);
 		assert.strictEqual(publicResult.allow, true);
 
-		const privateResult = await checkAccess(mockCaller, 'private-kb');
+		const privateResult = await checkAccess({ ...mockContext, kbId: 'private-kb' });
 		assert.ok(privateResult);
 		assert.strictEqual(privateResult.allow, false);
 	});
 
 	it('can make per-user decisions', async () => {
 		registerHooks({
-			onAccessCheck: async (caller) => {
-				if (caller.userId === 'test:octocat') {
+			onAccessCheck: async (context) => {
+				if (context.user?.id === 'test:octocat') {
 					return { allow: true };
 				}
 				return { allow: false, reason: 'User not authorized' };
 			},
 		});
 
-		const allowed = await checkAccess(mockCaller, TEST_KB);
+		const allowed = await checkAccess(mockContext);
 		assert.strictEqual(allowed.allow, true);
 
-		const denied = await checkAccess({ ...mockCaller, userId: 'test:stranger' }, TEST_KB);
+		const denied = await checkAccess({
+			...mockContext,
+			user: { id: 'test:stranger', username: 'test:stranger' },
+		});
 		assert.strictEqual(denied.allow, false);
 	});
 });

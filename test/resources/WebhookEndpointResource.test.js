@@ -23,7 +23,7 @@ describe('WebhookEndpointResource', () => {
 			const resource = new WebhookEndpointResource();
 			resource._setContext({ user: null });
 
-			const result = await resource.get();
+			const result = await resource.get({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 401);
 		});
@@ -32,7 +32,7 @@ describe('WebhookEndpointResource', () => {
 			const resource = new WebhookEndpointResource();
 			resource._setContext({ user: { id: 'u1', role: 'service_account' } });
 
-			const result = await resource.get();
+			const result = await resource.get({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 403);
 		});
@@ -72,7 +72,7 @@ describe('WebhookEndpointResource', () => {
 			const resource = new WebhookEndpointResource();
 			resource._setContext({ user: null });
 
-			const result = await resource.post({}, { provider: 'github' });
+			const result = await resource.post({ kbId: TEST_KB }, { provider: 'github' });
 
 			assert.strictEqual(result.status, 401);
 		});
@@ -81,7 +81,7 @@ describe('WebhookEndpointResource', () => {
 			const resource = new WebhookEndpointResource();
 			resource._setContext({ user: { id: 'u1', role: 'ai_agent' } });
 
-			const result = await resource.post({}, { provider: 'github' });
+			const result = await resource.post({ kbId: TEST_KB }, { provider: 'github' });
 
 			assert.strictEqual(result.status, 403);
 		});
@@ -135,7 +135,7 @@ describe('WebhookEndpointResource', () => {
 			resource._setContext({ user: null });
 			resource._setId('ep-1');
 
-			const result = await resource.delete();
+			const result = await resource.delete({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 401);
 		});
@@ -145,7 +145,7 @@ describe('WebhookEndpointResource', () => {
 			resource._setContext({ user: { id: 'u1', role: 'service_account' } });
 			resource._setId('ep-1');
 
-			const result = await resource.delete();
+			const result = await resource.delete({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 403);
 		});

@@ -20,7 +20,7 @@ describe('TriageResource', () => {
 			const resource = new TriageResource();
 			resource._setContext({ user: null });
 
-			const result = await resource.get();
+			const result = await resource.get({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 401);
 		});
@@ -29,7 +29,7 @@ describe('TriageResource', () => {
 			const resource = new TriageResource();
 			resource._setContext({ user: { id: 'u1', role: 'service_account' } });
 
-			const result = await resource.get();
+			const result = await resource.get({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 403);
 		});
@@ -66,7 +66,7 @@ describe('TriageResource', () => {
 			const resource = new TriageResource();
 			resource._setContext({ user: null });
 
-			const result = await resource.post({}, { source: 'test', summary: 'Test' });
+			const result = await resource.post({ kbId: TEST_KB }, { source: 'test', summary: 'Test' });
 
 			assert.strictEqual(result.status, 401);
 		});
@@ -75,7 +75,7 @@ describe('TriageResource', () => {
 			const resource = new TriageResource();
 			resource._setContext({ user: { id: 'u1', role: 'team' } });
 
-			const result = await resource.post({}, { source: 'test', summary: 'Test' });
+			const result = await resource.post({ kbId: TEST_KB }, { source: 'test', summary: 'Test' });
 
 			assert.strictEqual(result.status, 403);
 		});
@@ -129,7 +129,7 @@ describe('TriageResource', () => {
 			resource._setContext({ user: null });
 			resource._setId('some-id');
 
-			const result = await resource.put({}, { action: 'dismissed' });
+			const result = await resource.put({ kbId: TEST_KB }, { action: 'dismissed' });
 
 			assert.strictEqual(result.status, 401);
 		});
@@ -139,7 +139,7 @@ describe('TriageResource', () => {
 			resource._setContext({ user: { id: 'u1', role: 'service_account' } });
 			resource._setId('some-id');
 
-			const result = await resource.put({}, { action: 'dismissed' });
+			const result = await resource.put({ kbId: TEST_KB }, { action: 'dismissed' });
 
 			assert.strictEqual(result.status, 403);
 		});

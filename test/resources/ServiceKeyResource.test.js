@@ -20,7 +20,7 @@ describe('ServiceKeyResource', () => {
 			const resource = new ServiceKeyResource();
 			resource._setContext({ user: null });
 
-			const result = await resource.get();
+			const result = await resource.get({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 401);
 		});
@@ -29,7 +29,7 @@ describe('ServiceKeyResource', () => {
 			const resource = new ServiceKeyResource();
 			resource._setContext({ user: { id: 'u1', role: 'service_account' } });
 
-			const result = await resource.get();
+			const result = await resource.get({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 403);
 		});
@@ -92,7 +92,7 @@ describe('ServiceKeyResource', () => {
 			const resource = new ServiceKeyResource();
 			resource._setContext({ user: null });
 
-			const result = await resource.post({}, { name: 'Test', role: 'service_account' });
+			const result = await resource.post({ kbId: TEST_KB }, { name: 'Test', role: 'service_account' });
 
 			assert.strictEqual(result.status, 401);
 		});
@@ -101,7 +101,7 @@ describe('ServiceKeyResource', () => {
 			const resource = new ServiceKeyResource();
 			resource._setContext({ user: { id: 'u1', role: 'ai_agent' } });
 
-			const result = await resource.post({}, { name: 'Test', role: 'service_account' });
+			const result = await resource.post({ kbId: TEST_KB }, { name: 'Test', role: 'service_account' });
 
 			assert.strictEqual(result.status, 403);
 		});
@@ -163,7 +163,7 @@ describe('ServiceKeyResource', () => {
 			resource._setContext({ user: null });
 			resource._setId('key-1');
 
-			const result = await resource.delete();
+			const result = await resource.delete({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 401);
 		});
@@ -173,7 +173,7 @@ describe('ServiceKeyResource', () => {
 			resource._setContext({ user: { id: 'u1', role: 'service_account' } });
 			resource._setId('key-1');
 
-			const result = await resource.delete();
+			const result = await resource.delete({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 403);
 		});

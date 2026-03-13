@@ -79,9 +79,10 @@ describe('KnowledgeEntryResource', () => {
 			const resource = new KnowledgeEntryResource();
 			resource._setContext({ user: null });
 
-			const result = await resource.post({}, { title: 'Test', content: 'Body', tags: [] });
-
-			assert.strictEqual(result.status, 401);
+			await assert.rejects(
+				() => resource.post({ kbId: TEST_KB }, { title: 'Test', content: 'Body', tags: [] }),
+				(err) => err.statusCode === 401
+			);
 		});
 
 		it('creates an entry when authenticated', async () => {
@@ -143,7 +144,7 @@ describe('KnowledgeEntryResource', () => {
 			resource._setContext({ user: null });
 			resource._setId('some-id');
 
-			const result = await resource.put({}, { title: 'Updated' });
+			const result = await resource.put({ kbId: TEST_KB }, { title: 'Updated' });
 
 			assert.strictEqual(result.status, 401);
 		});
@@ -195,7 +196,7 @@ describe('KnowledgeEntryResource', () => {
 			resource._setContext({ user: null });
 			resource._setId('some-id');
 
-			const result = await resource.delete();
+			const result = await resource.delete({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 401);
 		});
@@ -205,7 +206,7 @@ describe('KnowledgeEntryResource', () => {
 			resource._setContext({ user: { id: 'user-1', role: 'ai-agent' } });
 			resource._setId('some-id');
 
-			const result = await resource.delete();
+			const result = await resource.delete({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 403);
 		});

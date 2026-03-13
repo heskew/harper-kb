@@ -20,7 +20,7 @@ describe('QueryLogResource', () => {
 			const resource = new QueryLogResource();
 			resource._setContext({ user: null });
 
-			const result = await resource.get();
+			const result = await resource.get({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 401);
 		});
@@ -29,7 +29,7 @@ describe('QueryLogResource', () => {
 			const resource = new QueryLogResource();
 			resource._setContext({ user: { id: 'u1', role: 'service_account' } });
 
-			const result = await resource.get();
+			const result = await resource.get({ kbId: TEST_KB });
 
 			assert.strictEqual(result.status, 403);
 		});
