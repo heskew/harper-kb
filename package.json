@@ -1,6 +1,6 @@
 {
 	"name": "harper-kb",
-	"version": "0.3.3",
+	"version": "0.4.0",
 	"description": "Knowledge base plugin for Harper with MCP server integration",
 	"type": "module",
 	"main": "dist/index.js",
@@ -52,7 +52,7 @@
 	},
 	"optionalDependencies": {
 		"harper-fabric-embeddings": "^0.1.4",
-		"harper-fabric-onnx": "^0.1.0"
+		"harper-fabric-onnx": "^0.2.0"
 	},
 	"peerDependencies": {
 		"harperdb": ">=4.7.0"
