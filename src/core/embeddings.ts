@@ -42,8 +42,10 @@ const MODEL_CONFIGS: Record<string, { repo: string; file: string }> = {
 	},
 };
 
-// Module-level models directory, set during initEmbeddingModel
+// Module-level config, set during initEmbeddingModel
 let modelsDir: string | null = null;
+let onnxFileOverride: string | undefined;
+let maxTokensOverride: number | undefined;
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
@@ -71,6 +73,8 @@ export async function initEmbeddingModel(config: {
 	embeddingModel: string;
 	componentDir: string;
 	embeddingBackend?: BackendId;
+	embeddingOnnxFile?: string;
+	embeddingMaxTokens?: number;
 }): Promise<void> {
 	if (backend) {
 		logger?.debug?.('Embedding model already initialized');
@@ -79,6 +83,8 @@ export async function initEmbeddingModel(config: {
 
 	const modelName = config.embeddingModel || 'nomic-embed-text';
 	modelsDir = path.join(config.componentDir, 'models');
+	onnxFileOverride = config.embeddingOnnxFile;
+	maxTokensOverride = config.embeddingMaxTokens;
 
 	// If a specific backend is requested, use it directly
 	if (config.embeddingBackend) {
@@ -160,12 +166,23 @@ async function initFabricBackend(modelName: string): Promise<EmbeddingBackend> {
 async function initFabricOnnxBackend(modelName: string): Promise<EmbeddingBackend> {
 	const onnxPkg = 'harper-fabric-onnx';
 	const onnxModule = (await import(onnxPkg)) as unknown as {
-		init(options: { modelPath?: string; modelsDir?: string; modelName?: string }): Promise<void>;
+		init(options: {
+			modelPath?: string;
+			modelsDir?: string;
+			modelName?: string;
+			onnxFile?: string;
+			maxTokens?: number;
+		}): Promise<void>;
 		embed(text: string): Promise<number[]>;
 		dispose(): Promise<void>;
 	};
 
-	await onnxModule.init({ modelsDir: modelsDir!, modelName });
+	await onnxModule.init({
+		modelsDir: modelsDir!,
+		modelName,
+		onnxFile: onnxFileOverride,
+		maxTokens: maxTokensOverride,
+	});
 
 	return {
 		generateEmbedding: (text) => onnxModule.embed(text),

@@ -321,6 +321,10 @@ export interface KnowledgePluginConfig {
 	embeddingModel?: string;
 	/** Preferred embedding backend: "gguf", "onnx", or "llama-cpp" (default: tries each in order) */
 	embeddingBackend?: 'gguf' | 'onnx' | 'llama-cpp';
+	/** Override ONNX file variant, e.g. "onnx/model_quantized.onnx" (ONNX backend only) */
+	embeddingOnnxFile?: string;
+	/** Override max token length for tokenizer truncation (ONNX backend only) */
+	embeddingMaxTokens?: number;
 }
 
 // ============================================================================
