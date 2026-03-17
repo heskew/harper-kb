@@ -17,11 +17,15 @@ const SCOPES = ['mcp:read', 'mcp:write'];
  * and what scopes are supported. Each KB has its own protected resource
  * metadata so the resource URL is scoped to that KB.
  */
-export function handleProtectedResourceMetadata(request: HarperRequest, kbId: string): Response {
+export function handleProtectedResourceMetadata(
+	request: HarperRequest,
+	kbId: string,
+	resourcePath?: string,
+): Response {
 	const baseUrl = getBaseUrl(request);
 
 	return jsonResponse(200, {
-		resource: `${baseUrl}/mcp/${kbId}`,
+		resource: resourcePath ? `${baseUrl}${resourcePath}` : `${baseUrl}/mcp/${kbId}`,
 		authorization_servers: [baseUrl],
 		scopes_supported: SCOPES,
 		bearer_methods_supported: ['header'],

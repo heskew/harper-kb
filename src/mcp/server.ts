@@ -17,7 +17,7 @@
 import { handleJsonRpc } from './protocol.ts';
 import { validateMcpAuth, type ValidatedCaller } from '../oauth/validate.ts';
 import { getKnowledgeBase } from '../core/knowledge-base.ts';
-import { checkAccess } from '../hooks.ts';
+import { checkAccess, resolveKbId } from '../hooks.ts';
 import { readBody, getBaseUrl } from '../http-utils.ts';
 import type { HarperRequest } from '../types.ts';
 
@@ -54,14 +54,23 @@ export function createMcpMiddleware(): (
 			return next(request);
 		}
 
-		// Extract kbId from the path
-		const kbId = extractKbIdFromPath(pathname);
+		// Extract kbId from the path, falling back to hook-based resolution
+		let kbId = extractKbIdFromPath(pathname);
 		if (!kbId) {
 			return next(request);
 		}
 
-		// Validate the KB exists
-		const kb = await getKnowledgeBase(kbId);
+		// Validate the KB exists — if not, try hostname-based resolution via hook
+		let kb = await getKnowledgeBase(kbId);
+		if (!kb) {
+			const hostHeader = (request.headers as Record<string, string | undefined>)?.host || '';
+			const hostname = hostHeader.split(':')[0];
+			const resolved = await resolveKbId({ hostname, pathname });
+			if (resolved) {
+				kbId = resolved;
+				kb = await getKnowledgeBase(kbId);
+			}
+		}
 		if (!kb) {
 			return new Response(
 				JSON.stringify({

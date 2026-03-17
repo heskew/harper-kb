@@ -59,6 +59,17 @@ export interface KnowledgeHooks {
 	onAccessCheck?: (context: AccessCheckContext) => Promise<AccessCheckResult>;
 
 	/**
+	 * Resolve a kbId from the request when the URL path doesn't contain a valid one.
+	 *
+	 * Called by MCP and OAuth metadata handlers when the kbId extracted from
+	 * the URL path doesn't match an existing KB. Enables hostname-based routing
+	 * where the host app maps subdomains to knowledge bases.
+	 *
+	 * Return a kbId string, or null to indicate no resolution.
+	 */
+	resolveKbId?: (request: { hostname: string; pathname: string }) => Promise<string | null>;
+
+	/**
 	 * URL path for login redirect.
 	 *
 	 * Single provider:    "/oauth/github/login"  — goes straight to that provider
@@ -102,6 +113,16 @@ export async function checkAccess(context: AccessCheckContext): Promise<AccessCh
  */
 export function getLoginPath(): string | null {
 	return hooks.loginPath || null;
+}
+
+/**
+ * Resolve a kbId from the request via the registered hook.
+ *
+ * Returns null if no hook is registered or if the hook returns null.
+ */
+export async function resolveKbId(request: { hostname: string; pathname: string }): Promise<string | null> {
+	if (!hooks.resolveKbId) return null;
+	return hooks.resolveKbId(request);
 }
 
 /**

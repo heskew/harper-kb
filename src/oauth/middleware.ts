@@ -19,6 +19,8 @@ import { handleRegister } from './register.ts';
 import { handleAuthorizeGet, handleAuthorizePost } from './authorize.ts';
 import { handleToken } from './token.ts';
 import { getJwks } from './keys.ts';
+import { resolveKbId } from '../hooks.ts';
+import { getKnowledgeBase } from '../core/knowledge-base.ts';
 import type { HarperRequest } from '../types.ts';
 
 type MiddlewareFn = (request: HarperRequest, next: (req: HarperRequest) => Promise<unknown>) => Promise<unknown>;
@@ -34,7 +36,20 @@ export function createOAuthMiddleware(): MiddlewareFn {
 		// Well-known metadata endpoints — protected resource metadata is per-KB
 		const prMatch = pathname.match(/^\/\.well-known\/oauth-protected-resource\/([^/]+)$/);
 		if (prMatch && method === 'GET') {
-			return handleProtectedResourceMetadata(request, prMatch[1]);
+			let kbId = prMatch[1];
+			// If the path kbId isn't a real KB, try hostname-based resolution
+			const kb = await getKnowledgeBase(kbId);
+			if (!kb) {
+				const hostHeader = (request.headers as Record<string, string | undefined>)?.host || '';
+			const hostname = hostHeader.split(':')[0];
+				const resolved = await resolveKbId({ hostname, pathname });
+				if (resolved) {
+					// Resource path uses the original path segment (e.g., /mcp) to
+					// match the URL the client connected to (hostname-based routing)
+					return handleProtectedResourceMetadata(request, resolved, `/${prMatch[1]}`);
+				}
+			}
+			return handleProtectedResourceMetadata(request, kbId);
 		}
 		if (pathname === '/.well-known/oauth-authorization-server' && method === 'GET') {
 			return handleAuthServerMetadata(request);
